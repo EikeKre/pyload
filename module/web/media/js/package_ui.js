@@ -187,7 +187,7 @@ var Package = new Class({
         }).send();
     },
 
-    deleteLinkByType: function(type) {
+    selectLinkByType: function(type) {
 
         var ul = $("sort_children_{id}".substitute({"id": this.id}));
 
@@ -212,28 +212,31 @@ var Package = new Class({
     },
 
     createLinks: function(data) {
+
         var children = $("children_{id}".substitute({"id": this.id}));
         var ul = $("sort_children_{id}".substitute({"id": this.id}));
         ul.set("html", "");
 
         var packageObject = this;
 
-        var selectionElements = new Element("div", {id: "selection_elements"});
+        var selectionElementsWrapper = new Element("div", {id: "selection_elements", class:"row"});
         var markDropdown = new Element("select", {
-            id:"select_mark"
+            id:"select_mark",
+            class: "form-control"
 
         }).addEvent('change',function() {
             if (this.getSelected().get("value")) {
-                packageObject.deleteLinkByType(this.getSelected().get("value").toString());
+                packageObject.selectLinkByType(this.getSelected().get("value").toString());
             }
         });
 
-        new Element('option', {'text':'Select...'}).inject(markDropdown);
+        new Element('option', {'value': 'none','text':'Select...'}).inject(markDropdown);
         new Element('option', {'value': 'all', 'text':'All'}).inject(markDropdown);
         new Element('option', {'value': 'none', 'text':'None'}).inject(markDropdown);
 
+        var dropdownWrapper = new Element("div", {class:"col-xs-2"}).adopt(markDropdown);
 
-        selectionElements.adopt(markDropdown).inject(ul, "before");
+        selectionElementsWrapper.adopt(dropdownWrapper).inject(ul, "before");
 
         var downloadPlugins = {};
         data.links.each(function(link) {
@@ -267,13 +270,12 @@ var Package = new Class({
                     link.icon = 'glyphicon glyphicon-ban-circle';
             }
 
-
             var html = "<span style='' class='child_status'><span style='margin-right: 2px;' class='{icon} sorthandle'></span></span>\n".substitute({"icon": link.icon});
             html += "<span style='font-size: 18px; text-weight:bold'>{name}</span><br /><div class='child_secrow' style='margin-left: 21px; margin-bottom: 7px;'>".substitute({"name": link.name});
-            html += "<span class='child_status' style='font-size: 12px; color:#555'>{statusmsg}</span>{error}&nbsp;".substitute({"statusmsg": link.statusmsg, "error":link.error});
+            html += "<span class='child_status' style='font-size: 12px; color:red'>{statusmsg} </span>{error}&nbsp;".substitute({"statusmsg": link.statusmsg, "error":link.error});
             html += "<span class='child_status' style='font-size: 12px; color:#555'>{format_size}</span>".substitute({"format_size": link.format_size});
-            html += "<span class='child_status' style='font-size: 12px; color:#555'> {plugin}</span>&nbsp;&nbsp;".substitute({"plugin": link.plugin});
-            html += "<input type='checkbox' class='form-control' name='delete_bundle' value='1' />";
+            html += " <span class='child_status link_plugin_name' style='font-size: 12px; color:#555'>{plugin}</span>&nbsp;&nbsp;".substitute({"plugin": link.plugin});
+            html += "<input type='checkbox' name='delete_bundle' value='1' title='zum L&ouml;schen markieren' /> ";
             html += "<span class='glyphicon glyphicon-trash' title='{{_("Delete Link")}}' style='cursor: pointer;  font-size: 12px; color:#333;' ></span>&nbsp;&nbsp;";
             html += "<span class='glyphicon glyphicon-repeat' title='{{_("Restart Link")}}' style='cursor: pointer; font-size: 12px; color:#333;' ></span></div>";
 
@@ -284,20 +286,22 @@ var Package = new Class({
             });
 
             div.getElement('input[name="delete_bundle"]').addEvent("change", function() {
+                var deleteBundle;
                 if (0 < ul.getElements('input[name="delete_bundle"]:checked').length) {
 
-                    if (!children.getElement("button.delete_bundle")) {
+                    if (!children.getElement(".delete_bundle")) {
                         var deleteButton = new Element("button", {
                             html: "Delete chosen",
-                            class: "delete_bundle"
+                            class: "btn btn-danger"
                         }).addEvent("click", function () {
                                 packageObject.bundleDelete();
                             });
 
-                        selectionElements.adopt(deleteButton);
+                        var buttonWrapper = new Element("div", {class:"col-xs-2 delete_bundle"}).adopt(deleteButton);
+                        selectionElementsWrapper.adopt(buttonWrapper);
                     }
-                } else if (deleteButton = selectionElements.getElement("button.delete_bundle")) {
-                    deleteButton.remove();
+                } else if (deleteBundle = selectionElementsWrapper.getElement(".delete_bundle")) {
+                    deleteBundle.remove();
                 }
             });
 
