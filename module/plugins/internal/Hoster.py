@@ -34,7 +34,7 @@ if not hasattr(__builtin__.property, "setter"):
 class Hoster(Base):
     __name__ = "Hoster"
     __type__ = "hoster"
-    __version__ = "0.63"
+    __version__ = "0.66"
     __status__ = "stable"
 
     __pattern__ = r'^unmatchable$'
@@ -91,36 +91,37 @@ class Hoster(Base):
             self.account = False
             self.user = None  # @TODO: Remove in 0.4.10
         else:
-            super(Hoster, self).load_account()
+            Base.load_account(self)
             # self.restart_free = False
 
     def _process(self, thread):
         self.thread = thread
 
-        self._initialize()
-        self._setup()
-
-        #@TODO: Enable in 0.4.10
-        # self.pyload.hookManager.downloadPreparing(self.pyfile)
-        # self.check_status()
-        self.check_duplicates()
-
-        self.pyfile.setStatus("starting")
-
         try:
-            self.log_info(_("Processing url: ") + self.pyfile.url)
-            self.process(self.pyfile)
-            self.check_status()
+            self._initialize()
+            self._setup()
 
-            self._check_download()
+            #@TODO: Enable in 0.4.10
+            # self.pyload.hookManager.downloadPreparing(self.pyfile)
+            # self.check_status()
+            self.check_duplicates()
 
-        except Fail, e:  # @TODO: Move to PluginThread in 0.4.10
-            if self.config.get('fallback', True) and self.premium:
-                self.log_warning(_("Premium download failed"), e)
-                self.restart(premium=False)
+            self.pyfile.setStatus("starting")
 
-            else:
-                raise Fail(encode(e))
+            try:
+                self.log_info(_("Processing url: ") + self.pyfile.url)
+                self.process(self.pyfile)
+                self.check_status()
+
+                self._check_download()
+
+            except Fail, e:  # @TODO: Move to PluginThread in 0.4.10
+                if self.config.get('fallback', True) and self.premium:
+                    self.log_warning(_("Premium download failed"), e)
+                    self.restart(premium=False)
+
+                else:
+                    raise Fail(encode(e))
 
         finally:
             self._finalize()
@@ -158,15 +159,11 @@ class Hoster(Base):
         if resumable is None:
             resumable = self.resume_download
 
-        if isinstance(redirect, int):
+        if type(redirect) == int:
             maxredirs = max(redirect, 1)
 
         elif redirect:
-            maxredirs = int(
-                self.pyload.api.getConfigValue(
-                    "UserAgentSwitcher",
-                    "maxredirs",
-                    "plugin")) or maxredirs  # @TODO: Remove `int` in 0.4.10
+            maxredirs = int(self.config.get("maxredirs", plugin="UserAgentSwitcher")) or maxredirs  # @TODO: Remove `int` in 0.4.10
 
         header = self.load(url, just_header=True)
 

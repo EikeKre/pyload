@@ -17,7 +17,7 @@ from ..internal.Crypter import Crypter
 class FilecryptCc(Crypter):
     __name__ = "FilecryptCc"
     __type__ = "crypter"
-    __version__ = "0.27"
+    __version__ = "0.32"
     __status__ = "testing"
 
     __pattern__ = r'https?://(?:www\.)?filecrypt\.cc/Container/\w+'
@@ -37,11 +37,10 @@ class FilecryptCc(Crypter):
     WEBLINK_PATTERN = r"openLink.?'([\w\-]*)',"
 
     CAPTCHA_PATTERN = r'<h2>Security prompt</h2>'
-    INTERNAL_CAPTCHA_PATTERN = r'<img id="nc" src="(.+?)"'
+    INTERNAL_CAPTCHA_PATTERN = r'<img id="nc" .* src="(.+?)"'
     CIRCLE_CAPTCHA_PATTERN = r'<input type="image" src="(.+?)"'
     KEY_CAPTCHA_PATTERN = r"<script language=JavaScript src='(http://backs\.keycaptcha\.com/swfs/cap\.js)'"
-    SOLVE_MEDIA_PATTERN = r'<script type="text/javascript" src="(http://api\.solvemedia\.com/papi/challenge.+?)"'
-
+    SOLVE_MEDIA_PATTERN = r'<script type="text/javascript" src="(https?://api(?:-secure)?\.solvemedia\.com/papi/challenge.+?)"'
     MIRROR_PAGE_PATTERN = r'"[\w]*" href="(https?://(?:www\.)?filecrypt.cc/Container/\w+\.html\?mirror=\d+)">'
 
     def setup(self):
@@ -77,7 +76,7 @@ class FilecryptCc(Crypter):
             self.site_with_links = self.site_with_links + self.load(i)
 
     def handle_password_protection(self):
-        if '<input type="text" name="password"' not in self.data:
+        if re.search(r'div class="input">\s*<input type="password" name="password" id="p4assw0rt"', self.data) is None:
             return
 
         self.log_info(_("Folder is password protected"))
@@ -98,14 +97,13 @@ class FilecryptCc(Crypter):
             m4 = re.search(self.KEY_CAPTCHA_PATTERN, self.data)
 
             if m1:  #: Normal captcha
-                self.log_debug(
-                    "Internal Captcha URL: %s" %
-                    urlparse.urljoin(
-                        self.pyfile.url,
-                        m1.group(1)))
+                captcha_url = urlparse.urljoin(self.pyfile.url, m1.group(1))
 
-                captcha_code = self.captcha.decrypt(urlparse.urljoin(self.pyfile.url, m1.group(1)),
-                                                    ref=True, input_type="gif")
+                self.log_debug("Internal Captcha URL: %s" % captcha_url)
+
+                captcha_code = self.captcha.decrypt(captcha_url,
+                                                    ref=True,
+                                                    input_type="gif")
 
                 self.site_with_links = self.load(self.pyfile.url,
                                                  post={'recaptcha_response_field': captcha_code})
@@ -196,7 +194,7 @@ class FilecryptCc(Crypter):
                         self.pyfile.url,
                         "/Link/%s.html" %
                         _link))
-                link2 = re.search('<iframe noresize src="(.*)"></iframe>', res)
+                link2 = re.search('<iframe .* noresize src="(.*)"></iframe>', res)
                 if link2:
                     res2 = self.load(link2.group(1), just_header=True)
                     self.urls.append(res2['location'])
@@ -206,15 +204,9 @@ class FilecryptCc(Crypter):
 
     def handle_CNL(self):
         try:
-            vjk = re.findall(
-                '<input type="hidden" name="jk" value="function f\(\){ return \'(.*)\';}">',
-                self.site_with_links)
-            vcrypted = re.findall(
-                '<input type="hidden" name="crypted" value="(.*)">',
-                self.site_with_links)
-
-            for i in range(len(vcrypted)):
-                self.urls.extend(self._get_links(vcrypted[i], vjk[i]))
+            CNLdata = re.findall('onsubmit="CNLPOP\(\'(.*)\', \'(.*)\', \'(.*)\', \'(.*)\'\);',self.site_with_links)
+            for index in CNLdata:
+                self.urls.extend(self._get_links(index[2], index[1]))
 
         except Exception, e:
             self.log_debug("Error decrypting CNL: %s" % e)
@@ -224,9 +216,9 @@ class FilecryptCc(Crypter):
         key = binascii.unhexlify(str(jk))
 
         #: Decrypt
-        Key = key
-        IV = key
-        obj = Crypto.Cipher.AES.new(Key, Crypto.Cipher.AES.MODE_CBC, IV)
+        #Key = key
+        #IV = key
+        obj = Crypto.Cipher.AES.new(key, Crypto.Cipher.AES.MODE_CBC, key)
         text = obj.decrypt(crypted.decode('base64'))
 
         #: Extract links

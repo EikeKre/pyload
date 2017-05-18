@@ -13,7 +13,7 @@ from .SimpleHoster import SimpleHoster
 class XFSHoster(SimpleHoster):
     __name__ = "XFSHoster"
     __type__ = "hoster"
-    __version__ = "0.78"
+    __version__ = "0.79"
     __status__ = "stable"
 
     __pattern__ = r'^unmatchable$'
@@ -80,7 +80,7 @@ class XFSHoster(SimpleHoster):
             pattern = r'(?:file: "(.+?)"|(https?://(?:www\.)?([^/]*?%s|\d+\.\d+\.\d+\.\d+)(\:\d+)?(/d/|(/files)?/\d+/\w+/).+?)["\'<])'
             self.LINK_PATTERN = pattern % self.PLUGIN_DOMAIN.replace('.', '\.')
 
-        super(XFSHoster, self)._prepare()
+        SimpleHoster._prepare(self)
 
         if self.DIRECT_LINK is None:
             self.direct_dl = self.premium

@@ -26,7 +26,7 @@ def parse_fileInfo(klass, url="", html=""):
 class Base(Plugin):
     __name__ = "Base"
     __type__ = "base"
-    __version__ = "0.29"
+    __version__ = "0.31"
     __status__ = "stable"
 
     __pattern__ = r'^unmatchable$'
@@ -273,6 +273,11 @@ class Base(Plugin):
         # self.pyload.hookManager.downloadPreparing(self.pyfile)
         # self.check_status()
 
+        #@TODO: Remove in 0.4.10
+        if self.__type__ == "crypter":
+            self.pyload.hookManager.downloadPreparing(self.pyfile)
+            self.check_status()
+
         self.pyfile.setStatus("starting")
 
         self.log_info(_("Processing url: ") + self.pyfile.url)
@@ -485,7 +490,7 @@ class Base(Plugin):
 
     def load(self, *args, **kwargs):
         self.check_status()
-        return super(Base, self).load(*args, **kwargs)
+        return Plugin.load(self, *args, **kwargs)
 
     def parse_html_form(self, attr_str="", input_names={}):
         return parse_html_form(attr_str, self.data, input_names)
@@ -500,7 +505,7 @@ class Base(Plugin):
         """
         Clean everything and remove references
         """
-        super(Base, self).clean()
+        Plugin.clean(self)
         for attr in ("account", "html", "pyfile", "thread"):
             if hasattr(self, attr):
                 setattr(self, attr, None)
